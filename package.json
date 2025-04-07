@@ -1,0 +1,21 @@
+{
+  "name": "kmltoschem",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@bte-germany/terraconvert": "^1.1.2",
+    "prismarine-nbt": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^35.1.4"
+  }
+}
