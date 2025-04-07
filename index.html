@@ -7,13 +7,17 @@
 </head>
 <body>
   <h1>KML to BTE Schematic</h1>
-  <p1>Загрузи</p1>
   <div>
     <button id="importKML">Импортировать KML</button>
     <button id="exportSchem">Экспортировать schem</button>
   </div>
-  <div id="status" style="margin-top: 10px; font-weight: bold;"></div>
-  
+  <div id="status" style="margin-top: 10px;">
+    Импортируйте KML файл
+  </div>
+  <div>
+    <label for="blockId">ID блока, из которого будут созданы контуры:</label>
+    <input type="text" id="blockId" value="diamond_block"/>
+  </div>
 
   <script type="module" src="./renderer.js"></script>
 </body>

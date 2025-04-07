@@ -5,14 +5,16 @@ import {readKML, getBTECoords, createSchematic} from "./converter.js"
 
 let kmlPath = null;
 let coords = null;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function createWindow() {
     const win = new BrowserWindow({
       width: 400,
-      height: 300,
+      height: 350,
       webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: true, // позволяет использовать Node.js в renderer.js
-        contextIsolation: false,
+        contextIsolation: true
       }
     });
 
@@ -21,25 +23,38 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 
-// ОБРАБОТЧИКИ
+//
+// ХЭНДЛЕРЫ
+//
+// Импорт
+ipcMain.handle("import-kml", async (event, optionalPath) => {
 
-ipcMain.handle("import-kml", async () => {
+  // Если нажата кнопка импорта
+  console.log('optionalpath:', optionalPath);
+  if (!optionalPath) {
+
     const result = await dialog.showOpenDialog({
-        filters: [{ name: 'KML Files', extensions: ['kml']}],
-        properties: ['openFile']
+      filters: [{ name: 'KML Files', extensions: ['kml']}],
+      properties: ['openFile']
     });
 
-    if (!result.canceled) {
-        kmlPath = result.filePaths[0];
-        coords = await readKML(kmlPath)
-        console.log('Координаты импортированы: ',coords)
-    }
+    if (result.canceled) {return};
+    kmlPath = result.filePaths[0];
+  
+  // Если использован drag-n-drop
+  } else {
+    kmlPath = optionalPath;
+  }
+
+  coords = await readKML(kmlPath);
+  console.log("Координаты импортированы");
 });
 
-ipcMain.handle('export-schem', async () => {
+// Экспорт
+ipcMain.handle('export-schem', async (event, blockId) => {
     if (coords && kmlPath) {
       const bteCoords = getBTECoords(coords);
-      await createSchematic(bteCoords, kmlPath);
+      await createSchematic(bteCoords, kmlPath, blockId);
       BrowserWindow.getAllWindows()[0].webContents.send('export-success');
     } 
     else {

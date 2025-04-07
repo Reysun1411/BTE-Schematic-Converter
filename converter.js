@@ -55,7 +55,7 @@ export function getBTECoords(contours) {
 // Принцип сохранения массива координат в схематику взят 
 // с файла exportLayers.ts репозитория https://github.com/Codestian/TerraSketch
 //
-export function createSchematic(btecoords, savePath) {
+export function createSchematic(btecoords, savePath, blockId) {
     // Получаем координаты
     const xCoords = btecoords.flatMap(bteline =>
         bteline.map(coord => coord[0]));
@@ -82,10 +82,12 @@ export function createSchematic(btecoords, savePath) {
         ));
 
     // Определение палитры схематики
+    const fullBlockId = "minecraft:" + blockId;
     const palette = {
         "minecraft:air": { type: TagType.Int, value: 0 },
-        "minecraft:diamond_block": { type: TagType.Int, value: 1 }
+        [fullBlockId]: { type: TagType.Int, value: 1 }
     };
+    console.log(Object.keys(palette));
 
     // Вычитаем из каждой координаты соответствующее минимальное значение,
     // чтобы подогнать под размер схематики
