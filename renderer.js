@@ -18,8 +18,13 @@ exportSchem.addEventListener('click', () => {
   window.electron.invokeExportSchem(blockId, exportFileName);
 });
 
+window.electron.onImportSuccess((fileName) => {
+  statusDiv.textContent = `Файл загружен: ${fileName}`;
+  statusDiv.style.color = 'blue';
+});
+
 // Оповещение об успешном экспорте
 window.electron.onExportSuccess(() => {
   statusDiv.textContent = 'Файл успешно сохранен!';
   statusDiv.style.color = 'green';
-});
+})

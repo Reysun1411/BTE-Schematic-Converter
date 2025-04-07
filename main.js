@@ -40,6 +40,9 @@ ipcMain.handle("import-kml", async (event) => {
 
   coords = await readKML(kmlPath);
   console.log("KML imported");
+
+  const fileName = path.basename(kmlPath);
+  event.sender.send('import-success', fileName);
 });
 
 // Экспорт

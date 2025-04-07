@@ -161,7 +161,7 @@ export function exportSchematic(schem, fileName, savePath) {
     const fullFileName = fileName + '.schem'
     const outputPath = path.join(path.dirname(savePath), fullFileName);
     fs.writeFile(outputPath, schem).then(() => {
-        console.log("Файл сохранен как ",outputPath);
+        console.log("Export path: ",outputPath);
     })
 }
 

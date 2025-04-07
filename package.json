@@ -2,8 +2,24 @@
   "name": "kmltoschem",
   "version": "1.0.0",
   "main": "main.js",
+  "build": {
+    "appId": "com.reysun.kmltoschem",
+    "productName": "KML to Schem",
+    "files": [
+      "**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  },
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +32,7 @@
     "prismarine-nbt": "^2.7.0"
   },
   "devDependencies": {
-    "electron": "^35.1.4"
+    "electron": "^35.1.4",
+    "electron-builder": "^26.0.12"
   }
 }
