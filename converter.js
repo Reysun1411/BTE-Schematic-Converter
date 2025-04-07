@@ -1,3 +1,10 @@
+//  Thanks to Codestian for implementing 
+//  saving an array of coordinates to a schematic file
+//  in his TerraSketch project.
+//  https://github.com/Codestian/TerraSketch
+//  Use TerraSketch for more advanced work with geographic data
+//  and converting it into schematics!
+
 import { fromGeo } from "@bte-germany/terraconvert";
 import { read } from "fs";
 import fs from 'fs/promises';
@@ -45,24 +52,40 @@ export function getBTECoords(contours) {
 }
 
 // Создание схематики
+// Принцип сохранения массива координат в схематику взят 
+// с файла exportLayers.ts репозитория https://github.com/Codestian/TerraSketch
+//
 export function createSchematic(btecoords, savePath) {
     // Получаем координаты
-    const xCoordinates = btecoords.flatMap(bteline =>
+    const xCoords = btecoords.flatMap(bteline =>
         bteline.map(coord => coord[0]));
-    const zCoordinates = btecoords.flatMap(bteline =>
+    const zCoords = btecoords.flatMap(bteline =>
         bteline.map(coord => coord[1]));
-    const yCoordinates = btecoords.flatMap(bteline =>
+    const yCoords = btecoords.flatMap(bteline =>
         bteline.map(coord => coord[2]));
     
     // Нахождение минимального и максимального значений x,y,z
-    const minX = Math.min(...xCoordinates), maxX = Math.max(...xCoordinates);
-    const minZ = Math.min(...zCoordinates), maxZ = Math.max(...zCoordinates);
-    const minY = Math.min(...yCoordinates), maxY = Math.max(...yCoordinates);
+    const minX = Math.min(...xCoords), maxX = Math.max(...xCoords);
+    const minZ = Math.min(...zCoords), maxZ = Math.max(...zCoords);
+    const minY = Math.min(...yCoords), maxY = Math.max(...yCoords);
     
     // Определение длины, ширины, высоты конечной схематики
     const length = maxX - minX;
     const width = maxZ - minZ;
     const height = maxY - minY;
+
+    // Трехмерный массив grid, обозначающий область схематики
+    const grid = 
+        Array.from({ length: height + 1 }, () =>
+        Array.from({ length: width + 1 }, () =>
+        Array.from({ length: length + 1 }, () => 0)
+        ));
+
+    // Определение палитры схематики
+    const palette = {
+        "minecraft:air": { type: TagType.Int, value: 0 },
+        "minecraft:diamond_block": { type: TagType.Int, value: 1 }
+    };
 
     // Вычитаем из каждой координаты соответствующее минимальное значение,
     // чтобы подогнать под размер схематики
@@ -71,34 +94,25 @@ export function createSchematic(btecoords, savePath) {
             coord[0] - minX,
             coord[1] - minZ,
             coord[2] - minY
-        ])
-    );
+    ]));
 
-    // Определение палитры схематики
-    const palette = {
-        "minecraft:air": { type: TagType.Int, value: 0 },
-        "minecraft:diamond_block": { type: TagType.Int, value: 1 }
-    };
-
-    // Трехмерный массив grid, обозначающий область схематики
-    const grid = 
-        Array.from({ length: height + 1 }, () =>
-        Array.from({ length: width + 1 }, () =>
-        Array.from({ length: length + 1 }, () => 0)
-        ));
-    
-    // Заполняем нужные блоки схематики алмазными блоками
+    // Соединяем точки каждой линии transformedCoords
     transformedCoords.forEach(line => {
-        const y = line[0][2]; // Получение высоты линии
+
+        // Получаем высоту всей линии (она не участвует в соединении точек)
+        const y = line[0][2]; 
         
         for (let i = 0; i < line.length-1; i++) {
 
+            // Получаем две точки
             const [x1, z1] = [line[i][0], line[i][1]]
             const [x2, z2] = [line[i + 1][0], line[i + 1][1]];
-            // Применение алгоритма Брезенхама, чтобы получить
+
+            // Применяем алгоритм Брезенхама, чтобы получить
             // массив точек для отрезка между [x1,z1] и [x2,z2]
             const segmentPoints = bresenham2D(x1, z1, x2, z2);
             
+            // Заполняем полученные блоки схематики блоком палитры с индексом 1
             segmentPoints.forEach(([x, z]) => {
                 grid[y][z][x] = 1})
             }
