@@ -11,12 +11,18 @@
     <button id="importKML">Импортировать KML</button>
     <button id="exportSchem">Экспортировать schem</button>
   </div>
-  <div id="status" style="margin-top: 10px;">
+  <div id="status" style="margin-top: 10px; margin-bottom: 20px;">
     Импортируйте KML файл
   </div>
-  <div>
+  <div style="margin-bottom: 10px;">
     <label for="blockId">ID блока, из которого будут созданы контуры:</label>
     <input type="text" id="blockId" value="diamond_block"/>
+  </div>
+  <div>
+    <label for="exportFileName">Название экспортируемого файла:</label>
+    <label>
+      <input type="text" id="exportFileName" value="converted"/>.schem
+    </label>
   </div>
 
   <script type="module" src="./renderer.js"></script>

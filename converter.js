@@ -55,7 +55,7 @@ export function getBTECoords(contours) {
 // Принцип сохранения массива координат в схематику взят 
 // с файла exportLayers.ts репозитория https://github.com/Codestian/TerraSketch
 //
-export function createSchematic(btecoords, savePath, blockId) {
+export function createSchematic(btecoords, blockId) {
     // Получаем координаты
     const xCoords = btecoords.flatMap(bteline =>
         bteline.map(coord => coord[0]));
@@ -87,7 +87,6 @@ export function createSchematic(btecoords, savePath, blockId) {
         "minecraft:air": { type: TagType.Int, value: 0 },
         [fullBlockId]: { type: TagType.Int, value: 1 }
     };
-    console.log(Object.keys(palette));
 
     // Вычитаем из каждой координаты соответствующее минимальное значение,
     // чтобы подогнать под размер схематики
@@ -152,11 +151,16 @@ export function createSchematic(btecoords, savePath, blockId) {
     };
 
     const nbtBuffer = writeUncompressed(schematic);
-
     const compressed = zlib.gzipSync(nbtBuffer);
 
-    const outputPath = path.join(path.dirname(savePath), "converted.schem");
-    fs.writeFile(outputPath, compressed).then(() => {
+    return compressed
+}
+
+// Сохранение файла
+export function exportSchematic(schem, fileName, savePath) {
+    const fullFileName = fileName + '.schem'
+    const outputPath = path.join(path.dirname(savePath), fullFileName);
+    fs.writeFile(outputPath, schem).then(() => {
         console.log("Файл сохранен как ",outputPath);
     })
 }

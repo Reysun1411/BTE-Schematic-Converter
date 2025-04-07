@@ -2,6 +2,7 @@ const statusDiv = document.getElementById('status');
 const importKml = document.getElementById('importKML');
 const exportSchem = document.getElementById('exportSchem');
 const blockIdInput = document.getElementById('blockId');
+const exportFileNameInput = document.getElementById('exportFileName');
 
 // Обработка кнопки импорта
 importKml.addEventListener('click', () => {
@@ -13,8 +14,8 @@ importKml.addEventListener('click', () => {
 exportSchem.addEventListener('click', () => {
   console.log('Export schem');
   const blockId = blockIdInput.value; // Значение diamond_block
-  console.log('1: ',blockId)
-  window.electron.invokeExportSchem(blockId);
+  const exportFileName = exportFileNameInput.value; // Значение converted
+  window.electron.invokeExportSchem(blockId, exportFileName);
 });
 
 // Оповещение об успешном экспорте
