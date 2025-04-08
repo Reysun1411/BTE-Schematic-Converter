@@ -5,6 +5,7 @@
   "build": {
     "appId": "com.reysun.kmltoschem",
     "productName": "KML to Schem",
+    "icon": "icon.ico",
     "files": [
       "**/*"
     ],
@@ -14,7 +15,8 @@
     "win": {
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "icon.ico"
     }
   },
   "scripts": {

@@ -52,11 +52,15 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
     if (coords && kmlPath) {
       if (!forbiddenChars.test(exportFileName)) {
         
+        // Оповещение о начале конвертации
+        BrowserWindow.getAllWindows()[0].webContents.send('converting');
+
         // Сам экспорт (поочередный вызов 3 функций)
         const bteCoords = getBTECoords(coords);
         const schem = createSchematic(bteCoords, blockId);
         await exportSchematic(schem, exportFileName, kmlPath);
         console.log('Successful export')
+        
         // Оповещение о том что произошел экспорт
         BrowserWindow.getAllWindows()[0].webContents.send('export-success')
 
@@ -82,6 +86,10 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
         buttons: ["OK"]
       })}
 });
+
+ipcMain.handle('on-converting', async (event) => {
+  event.sender.send('import-success', fileName);
+})
 //
 //
 app.on('window-all-closed', () => {

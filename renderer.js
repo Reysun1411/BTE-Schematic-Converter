@@ -24,8 +24,14 @@ window.electron.onImportSuccess((fileName) => {
   statusDiv.style.color = 'lightBlue';
 });
 
+// Оповещение о процессе конвертации
+window.electron.onConverting(() => {
+  statusDiv.textContent = 'Идет конвертация...'
+  statusDiv.style.color = 'wheat'
+})
+
 // Оповещение об успешном экспорте
 window.electron.onExportSuccess(() => {
   statusDiv.textContent = 'Файл успешно сохранен!';
-  statusDiv.style.color = 'teal';
+  statusDiv.style.color = 'MediumSeaGreen';
 })
