@@ -51,103 +51,91 @@ export function getBTECoords(contours) {
 // Создание схематики
 export function createSchematic(btecoords, blockId) {
     // Получаем координаты
-    const xCoords = btecoords.flatMap(bteline =>
-        bteline.map(coord => coord[0]));
-    const zCoords = btecoords.flatMap(bteline =>
-        bteline.map(coord => coord[1]));
-    const yCoords = btecoords.flatMap(bteline =>
-        bteline.map(coord => coord[2]));
-    
-    // Нахождение минимального и максимального значений x,y,z
+    const xCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[0]));
+    const zCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[1]));
+    const yCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[2]));
+  
+    // Границы схемы
     const minX = Math.min(...xCoords), maxX = Math.max(...xCoords);
     const minZ = Math.min(...zCoords), maxZ = Math.max(...zCoords);
     const minY = Math.min(...yCoords), maxY = Math.max(...yCoords);
-    
-    // Определение длины, ширины, высоты конечной схематики
-    const length = maxX - minX;
-    const width = maxZ - minZ;
-    const height = maxY - minY;
-
-    // Трехмерный массив grid, обозначающий область схематики
-    const grid = 
-        Array.from({ length: height + 1 }, () =>
-        Array.from({ length: width + 1 }, () =>
-        Array.from({ length: length + 1 }, () => 0)
-        ));
-
-    // Определение палитры схематики
+  
+    // Размеры схемы
+    const length = maxX - minX + 1;
+    const width = maxZ - minZ + 1;
+    const height = maxY - minY + 1;
+  
+    const totalSize = width * height * length;
+  
+    // Создаем одномерный массив
+    const blockData = new Uint8Array(totalSize); // 1 байт на блок
+  
+    // Палитра блоков
     const fullBlockId = "minecraft:" + blockId;
     const palette = {
-        "minecraft:air": { type: TagType.Int, value: 0 },
-        [fullBlockId]: { type: TagType.Int, value: 1 }
+      "minecraft:air": { type: TagType.Int, value: 0 },
+      [fullBlockId]: { type: TagType.Int, value: 1 }
     };
-
-    // Вычитаем из каждой координаты соответствующее минимальное значение,
-    // чтобы подогнать под размер схематики
+  
+    // Преобразуем координаты относительно минимума
     const transformedCoords = btecoords.map(bteline =>
-        bteline.map(coord => [
-            coord[0] - minX,
-            coord[1] - minZ,
-            coord[2] - minY
-    ]));
-
-    // Соединяем точки каждой линии transformedCoords
+      bteline.map(coord => [
+        coord[0] - minX,
+        coord[1] - minZ,
+        coord[2] - minY
+      ])
+    );
+  
+    // Заполняем массив блоков
     transformedCoords.forEach(line => {
-
-        // Получаем высоту всей линии (она не участвует в соединении точек)
-        const y = line[0][2]; 
-        
-        for (let i = 0; i < line.length-1; i++) {
-
-            // Получаем две точки
-            const [x1, z1] = [line[i][0], line[i][1]]
-            const [x2, z2] = [line[i + 1][0], line[i + 1][1]];
-
-            // Применяем алгоритм Брезенхама, чтобы получить
-            // массив точек для отрезка между [x1,z1] и [x2,z2]
-            const segmentPoints = bresenham2D(x1, z1, x2, z2);
-            
-            // Заполняем полученные блоки схематики блоком палитры с индексом 1
-            segmentPoints.forEach(([x, z]) => {
-                grid[y][z][x] = 1})
-            }
+      const y = line[0][2];
+  
+      for (let i = 0; i < line.length - 1; i++) {
+        const [x1, z1] = [line[i][0], line[i][1]];
+        const [x2, z2] = [line[i + 1][0], line[i + 1][1]];
+  
+        const segmentPoints = bresenham2D(x1, z1, x2, z2);
+  
+        segmentPoints.forEach(([x, z]) => {
+          const index = y * width * length + z * length + x;
+          blockData[index] = 1;
         });
-
-    const blockData = new Uint8Array(grid.flat(2));
-
+      }
+    });
+  
+    // Сборка схемы
     const schematic = {
-        type: TagType.Compound,
-        name: "Schematic",
-        value: {
-            DataVersion: { type: TagType.Int, value: 3700 },
-            Version: { type: TagType.Int, value: 2 },
-            Width: { type: TagType.Short, value: length + 1 },
-            Height: { type: TagType.Short, value: height + 1},
-            Length: { type: TagType.Short, value: width + 1 },
-            PaletteMax: { type: TagType.Int, value: 2 },
-            Palette: { type: TagType.Compound, value: palette },
-            BlockData: { type: TagType.ByteArray, value: Array.from(blockData) },
-            BlockEntities: {
-                type: TagType.List,
-                value: { type: TagType.Compound, value: [] },
-            },
-            Entities: {
-                type: TagType.List,
-                value: { type: TagType.Compound, value: [] },
-            },
-            Metadata: { type: TagType.Compound, value: {} },
-            Offset: {
-            type: TagType.IntArray,
-            // Исходная точка схематики (paste -o)
-            value: [Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)],
-            },
+      type: TagType.Compound,
+      name: "Schematic",
+      value: {
+        DataVersion: { type: TagType.Int, value: 3700 },
+        Version: { type: TagType.Int, value: 2 },
+        Width: { type: TagType.Short, value: length },
+        Height: { type: TagType.Short, value: height },
+        Length: { type: TagType.Short, value: width },
+        PaletteMax: { type: TagType.Int, value: 2 },
+        Palette: { type: TagType.Compound, value: palette },
+        BlockData: { type: TagType.ByteArray, value: blockData },
+        BlockEntities: {
+          type: TagType.List,
+          value: { type: TagType.Compound, value: [] },
         },
+        Entities: {
+          type: TagType.List,
+          value: { type: TagType.Compound, value: [] },
+        },
+        Metadata: { type: TagType.Compound, value: {} },
+        Offset: {
+          type: TagType.IntArray,
+          value: [Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)],
+        },
+      },
     };
-
+  
     const nbtBuffer = writeUncompressed(schematic);
     const compressed = zlib.gzipSync(nbtBuffer);
-
-    return compressed
+  
+    return compressed;
 }
 
 // Сохранение файла
