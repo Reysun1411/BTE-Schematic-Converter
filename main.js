@@ -12,19 +12,19 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 400,
     height: 400,
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true, // позволяет использовать Node.js в renderer.js
+      nodeIntegration: false,
       contextIsolation: true
     }
   });
-
   win.loadFile('index.html');
   }
 
 app.whenReady().then(createWindow);
 
-//
+
 // ХЭНДЛЕРЫ
 //
 // Импорт
@@ -42,23 +42,26 @@ ipcMain.handle("import-kml", async (event) => {
   console.log("KML imported");
 
   const fileName = path.basename(kmlPath);
+  // Оповещение о том что произошел импорт
   event.sender.send('import-success', fileName);
 });
-
+//
 // Экспорт
 ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
 
     if (coords && kmlPath) {
       if (!forbiddenChars.test(exportFileName)) {
-
+        
+        // Сам экспорт (поочередный вызов 3 функций)
         const bteCoords = getBTECoords(coords);
         const schem = createSchematic(bteCoords, blockId);
         await exportSchematic(schem, exportFileName, kmlPath);
         console.log('Successful export')
+        // Оповещение о том что произошел экспорт
         BrowserWindow.getAllWindows()[0].webContents.send('export-success')
 
-      } else {
-        console.log('Forbidden chars in files name')
+      } else { 
+        console.log('Exception: Forbidden chars in files name')
         await dialog.showMessageBox({
           type: "warning",
           title: "Ошибка",
@@ -69,7 +72,7 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
         })}
 
     } else {
-      console.log('No imported file');
+      console.log('Exception: No imported file');
       await dialog.showMessageBox({
         type: "warning",
         title: "Ошибка",
@@ -79,7 +82,8 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
         buttons: ["OK"]
       })}
 });
-
+//
+//
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });

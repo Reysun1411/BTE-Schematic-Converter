@@ -2,11 +2,8 @@
 //  saving an array of coordinates to a schematic file
 //  in his TerraSketch project.
 //  https://github.com/Codestian/TerraSketch
-//  Use TerraSketch for more advanced work with geographic data
-//  and converting it into schematics!
 
 import { fromGeo } from "@bte-germany/terraconvert";
-import { read } from "fs";
 import fs from 'fs/promises';
 import { writeUncompressed, TagType } from "prismarine-nbt";
 import zlib from "zlib";
@@ -52,9 +49,6 @@ export function getBTECoords(contours) {
 }
 
 // Создание схематики
-// Принцип сохранения массива координат в схематику взят 
-// с файла exportLayers.ts репозитория https://github.com/Codestian/TerraSketch
-//
 export function createSchematic(btecoords, blockId) {
     // Получаем координаты
     const xCoords = btecoords.flatMap(bteline =>
