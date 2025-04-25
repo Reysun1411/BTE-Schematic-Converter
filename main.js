@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function createWindow() {
   const win = new BrowserWindow({
     width: 400,
-    height: 400,
+    height: 420,
     icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -47,17 +47,18 @@ ipcMain.handle("import-kml", async (event) => {
 });
 //
 // Экспорт
-ipcMain.handle('export-schem', async (event, blockId, exportFileName) => {
+ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothCurves) => {
 
     if (coords && kmlPath) {
       if (!forbiddenChars.test(exportFileName)) {
         
         // Оповещение о начале конвертации
         BrowserWindow.getAllWindows()[0].webContents.send('converting');
+        console.log(`Exporting ${exportFileName} with block ${blockId} and useSmoothCurves ${useSmoothCurves}`);
 
         // Сам экспорт (поочередный вызов 3 функций)
         const bteCoords = getBTECoords(coords);
-        const schem = createSchematic(bteCoords, blockId);
+        const schem = createSchematic(bteCoords, blockId, useSmoothCurves);
         await exportSchematic(schem, exportFileName, kmlPath);
         console.log('Successful export')
         

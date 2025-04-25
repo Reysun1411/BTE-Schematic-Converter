@@ -137,3 +137,5 @@ dist
 
 # kml
 *.kml
+
+kml-to-bte-schematic/

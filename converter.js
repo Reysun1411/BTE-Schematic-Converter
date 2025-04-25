@@ -1,8 +1,3 @@
-//  Thanks to Codestian for implementing 
-//  saving an array of coordinates to a schematic file
-//  in his TerraSketch project.
-//  https://github.com/Codestian/TerraSketch
-
 import { fromGeo } from "@bte-germany/terraconvert";
 import fs from 'fs/promises';
 import { writeUncompressed, TagType } from "prismarine-nbt";
@@ -26,6 +21,7 @@ export async function readKML(filepath) {
     return contours;
 }
 
+
 // Преобразование координат в проекцию BTE и округление
 export function getBTECoords(contours) {
     const btecoords = [];
@@ -48,8 +44,9 @@ export function getBTECoords(contours) {
     return btecoords
 }
 
+
 // Создание схематики
-export function createSchematic(btecoords, blockId) {
+export function createSchematic(btecoords, blockId, useSmoothCurves) {
     // Получаем координаты
     const xCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[0]));
     const zCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[1]));
@@ -89,18 +86,22 @@ export function createSchematic(btecoords, blockId) {
     // Заполняем массив блоков
     transformedCoords.forEach(line => {
       const y = line[0][2];
-  
-      for (let i = 0; i < line.length - 1; i++) {
-        const [x1, z1] = [line[i][0], line[i][1]];
-        const [x2, z2] = [line[i + 1][0], line[i + 1][1]];
-  
-        const segmentPoints = bresenham2D(x1, z1, x2, z2);
-  
-        segmentPoints.forEach(([x, z]) => {
-          const index = y * width * length + z * length + x;
-          blockData[index] = 1;
-        });
+      const flat2D = line.map(([x, z]) => [x, z]);
+      let segmentPoints;
+
+      if (useSmoothCurves) {
+        segmentPoints = catmullRomSpline(flat2D);
+      } else {
+        segmentPoints = [];
+        for (let i = 0; i < flat2D.length - 1; i++) {
+          segmentPoints.push(...bresenham2D(...flat2D[i], ...flat2D[i+1]));
+        }
       }
+
+      segmentPoints.forEach(([x, z]) => {
+        const index = y * width * length + z * length + x;
+        blockData[index] = 1;
+      })
     });
   
     // Сборка схемы
@@ -145,6 +146,56 @@ export function exportSchematic(schem, fileName, savePath) {
     fs.writeFile(outputPath, schem).then(() => {
         console.log("Export path: ",outputPath);
     })
+}
+
+
+function catmullRomSpline(points, segments = 30) {
+  const result = [];
+  // Добавляем первый и последний точки для правильной интерполяции
+  const extended = [
+      points[0],
+      ...points,
+      points[points.length - 1]
+  ];
+
+  for (let i = 0; i < points.length - 1; i++) {
+      const p0 = extended[i];
+      const p1 = extended[i + 1];
+      const p2 = extended[i + 2];
+      const p3 = extended[i + 3];
+
+      for (let t = 0; t < segments; t++) {
+          const s = t / segments;
+          const x = catmullRom(p0[0], p1[0], p2[0], p3[0], s);
+          const z = catmullRom(p0[1], p1[1], p2[1], p3[1], s);
+          result.push([Math.round(x), Math.round(z)]);
+      }
+  }
+
+  return deduplicate(result);
+}
+
+
+// Возвращает точку на кривой между p1 и p2
+// t - положение точки (0.0 - 1.0)
+function catmullRom(p0, p1, p2, p3, t) {
+  return 0.5 * (
+    (2 * p1) +
+    (-p0 + p2) * t +
+    (2*p0 - 5*p1 + 4*p2 - p3) * t * t +
+    (-p0 + 3*p1 - 3*p2 + p3) * t * t * t
+);
+}
+
+
+function deduplicate(points) {
+  const seen = new Set();
+  return points.filter(([x, z]) => {
+      const key = `${x},${z}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+  });
 }
 
 // Алгоритм Брезенхама
