@@ -42,8 +42,14 @@ window.electron.onExportSuccess(() => {
   statusDiv.style.color = 'MediumSeaGreen';
 })
 
+// Оповещение о чтении файла
 window.electron.onReading(() => {
   statusDiv.textContent = 'Чтение файла...'
   statusDiv.style.color = 'wheat'
 })
 
+// Оповещение об ошибке при чтении файла
+window.electron.onExportError(() => {
+  statusDiv.textContent = 'Ошибка. Возможно, файл слишком большой'
+  statusDiv.style.color = 'salmon'
+})

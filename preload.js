@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electron', {
   onImportSuccess: (callback) => ipcRenderer.on('import-success', (event, fileName) => callback(fileName)),
   onExportSuccess: (callback) => ipcRenderer.on('export-success', callback),
   onConverting: (callback) => ipcRenderer.on('converting', callback),
-  onReading: (callback) => ipcRenderer.on('reading', callback)
+  onReading: (callback) => ipcRenderer.on('reading', callback),
+  onExportError: (callback) => ipcRenderer.on('export-error', callback)
 });

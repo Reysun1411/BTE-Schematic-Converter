@@ -64,6 +64,7 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothC
           await exportSchematic(schem, exportFileName, kmlPath);
         } catch (err) {
           console.error("Ошибка при создании схемы:",err);
+          event.sender.send('export-error');
           throw new Error(err.message);
         }
         
