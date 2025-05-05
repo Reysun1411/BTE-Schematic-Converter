@@ -1,113 +1,176 @@
 import { fromGeo } from "@bte-germany/terraconvert";
 import fs from 'fs/promises';
 import { writeUncompressed, TagType } from "prismarine-nbt";
+import { XMLParser } from "fast-xml-parser";
 import zlib from "zlib";
 import path from "path";
 
 // Чтение файла KML
 export async function readKML(filepath) {
+    // Чтение всего файла в data
     const data = await fs.readFile(filepath, "utf-8");
-
-    const coordsMatches = data.match(/<coordinates>([\s\S]*?)<\/coordinates>/g);
-    // Отбрасываем ненужное с помощью регулярного выражения
-    const contours = coordsMatches.map(match => {
-        return match
-          .replace(/<\/?coordinates>/g, '')            // Убираем <coordinates>
-          .trim()                                      // убираем пробелы
-          .split(/\s+/)                                // разделяем точки друг от друга по переносу строки
-          .map(line => line.split(',').map(Number));   // разделяем широту, долготу и высоту по запятой
-      });
     
+    // Создание парсера
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_"
+    });
+    const file = parser.parse(data); // парсим
+
+    let placemarks = [];
+    const doc = file.kml.Document;
+
+    // Если в документе несколько Placemark, то placemarks уже будет массивом:
+    if (Array.isArray(doc.Placemark)) {
+      placemarks = doc.Placemark;
+    } else if (doc.Folder && Array.isArray(doc.Folder.Placemark)) {
+      placemarks = doc.Folder.Placemark;
+
+    // Если в документа один Placemark, то надо сделать placemarks массивом:
+    } else if (doc.Folder && doc.Folder.Placemark) {
+      placemarks = [doc.Folder.Placemark];
+    } else if (doc.Placemark) {
+      placemarks = [doc.Placemark];
+    }
+
+    const contours = {};
+
+    for (const placemark of placemarks) {
+
+        // Получение высоты в ExtendedData (для kml созданных в qgis)
+        const elevationData = placemark.ExtendedData?.SchemaData?.SimpleData?.find(
+            (d) => d["@_name"] === "ELEV"
+        )?.["#text"];
+
+        // Получаем всё что между <coordinates></coordinates>
+        const coords = placemark.LineString?.coordinates?.trim();
+        if (!coords) continue;
+
+        const points = coords
+            .split(/\s+/)  // Разделение точек по пробелам и переносам строки
+            .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
+            .filter(arr => arr.length >= 2); // Только 2 и больше элемента в массиве
+        
+        const elevation = elevationData !== undefined
+        ? Number(elevationData)     // Если был найден ELEV, то преобразуем его в число
+        : (points[0]?.[2] ?? 0);        // если нет ELEV — берем высоту из третьего числа координат; если и он не определен, то 0
+
+        const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат линии, где у каждой координаты оставляем лишь широту и долготу
+        if (!contours[elevation]) {contours[elevation] = []}; // Создаем ключ высоты в contours, если такой высоты еще нет
+        contours[elevation].push(linePoints);                 // Пушим значение в словарь
+    }
+    
+    /* Вид возвращаемого словаря (ключ - высота, значение - массив линий):
+    {1: [ 
+          [ [lon,lat], [lon,lat], [lon,lat]... ]
+          [ [lon,lat], [lon,lat], [lon,lat]... ]
+          ...
+        ]
+      2: ...
+      ...}
+    */
     return contours;
 }
 
-
 // Преобразование координат в проекцию BTE и округление
 export function getBTECoords(contours) {
-    const btecoords = [];
+    const btecoords = {};
+    let mcheight;
 
-    contours.forEach(line => {
-        const btecoord = [];
-        line.forEach(coords => {
+    for (const [elev, lines] of Object.entries(contours)) {
 
-            const elevation = coords[2] - 1  // Высота (отнимается 1 для майнкрафта)
-            const xzConverted = 
-                fromGeo(coords[1],coords[0]) // Конвертация координат в проекцию BTE
-                .map(n => Math.floor(n)) // Округление вниз до целого числа
-            
-            // Добавление массива с координатами точки в массив линии
-            btecoord.push([...xzConverted, elevation]); 
-        });
-        // Добавление массива с координатами линии в массив всех линий
-        btecoords.push(btecoord);
-    });
+      mcheight = elev - 1 
+      // Контур в майне будет на 1 уровень ниже,
+      // чтобы в F3 отображалась нужная высота, когда стоишь на нем
+
+      lines.forEach(line => {
+          const convertedLine = []
+
+          line.forEach(coord => {
+              convertedLine.push(
+                fromGeo(coord[1],coord[0]) // Конвертация координат в проекцию BTE
+                .map(n => Math.floor(n))   // Округление вниз до целого числа
+              )
+          })
+          
+          // Добавляем сконвертированное в словарь btecoords
+          if (!btecoords[mcheight]) {btecoords[mcheight] = []};
+          btecoords[mcheight].push(convertedLine)
+      })
+
+    }
     return btecoords
 }
 
 
 // Создание схематики
 export function createSchematic(btecoords, blockId, useSmoothCurves) {
-    // Получаем координаты
-    const xCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[0]));
-    const zCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[1]));
-    const yCoords = btecoords.flatMap(bteline => bteline.map(coord => coord[2]));
-  
+    const MAX_ALLOWED_SIZE = 500_000_000;
+
+    // Получаем все координаты
+    const allCoords = Object.entries(btecoords).flatMap(([elev, lines]) =>
+      lines.flatMap(line => line.map(([x, z]) => [x, z, Number(elev)]))
+    );
+
+    const xCoords = allCoords.map(([x]) => x);
+    const zCoords = allCoords.map(([_, z]) => z);
+    const yCoords = allCoords.map(([_, __, y]) => y);
+
     // Границы схемы
-    const minX = Math.min(...xCoords), maxX = Math.max(...xCoords);
-    const minZ = Math.min(...zCoords), maxZ = Math.max(...zCoords);
-    const minY = Math.min(...yCoords), maxY = Math.max(...yCoords);
-  
+    const minX = xCoords.reduce((min, val) => Math.min(min, val), Infinity);
+    const maxX = xCoords.reduce((max, val) => Math.max(max, val), -Infinity);
+    const minZ = zCoords.reduce((min, val) => Math.min(min, val), Infinity);
+    const maxZ = zCoords.reduce((max, val) => Math.max(max, val), -Infinity);
+    const minY = yCoords.reduce((min, val) => Math.min(min, val), Infinity);
+    const maxY = yCoords.reduce((max, val) => Math.max(max, val), -Infinity);
+
     // Размеры схемы
     const length = maxX - minX + 1;
     const width = maxZ - minZ + 1;
     const height = maxY - minY + 1;
-  
+
     const totalSize = width * height * length;
-  
-    // Создаем одномерный массив
-    const blockData = new Uint8Array(totalSize); // 1 байт на блок
-  
-    // Палитра блоков
+    if (totalSize > MAX_ALLOWED_SIZE) {
+      throw new Error("Размер схемы слишком большой для обработки.");
+    }
+
+    const blockData = new Uint8Array(totalSize);
+
     const fullBlockId = "minecraft:" + blockId;
     const palette = {
       "minecraft:air": { type: TagType.Int, value: 0 },
       [fullBlockId]: { type: TagType.Int, value: 1 }
     };
-  
-    // Преобразуем координаты относительно минимума
-    const transformedCoords = btecoords.map(bteline =>
-      bteline.map(coord => [
-        coord[0] - minX,
-        coord[1] - minZ,
-        coord[2] - minY
-      ])
-    );
-  
-    // Заполняем массив блоков
-    transformedCoords.forEach(line => {
-      const y = line[0][2];
-      const flat2D = line.map(([x, z]) => [x, z]);
-      let segmentPoints;
 
-      if (useSmoothCurves) {
-        segmentPoints = catmullRomSpline(flat2D);
-      } else {
-        segmentPoints = [];
-        for (let i = 0; i < flat2D.length - 1; i++) {
-          segmentPoints.push(...bresenham2D(...flat2D[i], ...flat2D[i+1]));
+    // Обработка каждой высоты
+    Object.entries(btecoords).forEach(([elevStr, lines]) => {
+      const y = Number(elevStr) - minY;
+
+      lines.forEach(line => {
+        const flat2D = line.map(([x, z]) => [x - minX, z - minZ]);
+        let segmentPoints;
+
+        if (useSmoothCurves) {
+          segmentPoints = catmullRomSpline(flat2D);
+        } else {
+          segmentPoints = [];
+          for (let i = 0; i < flat2D.length - 1; i++) {
+            segmentPoints.push(...bresenham2D(...flat2D[i], ...flat2D[i + 1]));
+          }
         }
-      }
 
-      segmentPoints.forEach(([x, z]) => {
-        const index = y * width * length + z * length + x;
-        blockData[index] = 1;
-      })
+        segmentPoints.forEach(([x, z]) => {
+          if (x < 0 || z < 0 || y < 0 || x >= length || z >= width || y >= height) return;
+          const index = y * width * length + z * length + x;
+          blockData[index] = 1;
+        });
+      });
     });
-  
-    // Сборка схемы
+
     const schematic = {
       type: TagType.Compound,
       name: "Schematic",
+      author: "KMLtoBTESchematic 1.0.1 by Reysun",
       value: {
         DataVersion: { type: TagType.Int, value: 3700 },
         Version: { type: TagType.Int, value: 2 },
@@ -132,12 +195,15 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
         },
       },
     };
-  
+
+    console.log('original point: ',[Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)])
+
     const nbtBuffer = writeUncompressed(schematic);
     const compressed = zlib.gzipSync(nbtBuffer);
-  
+
     return compressed;
 }
+
 
 // Сохранение файла
 export function exportSchematic(schem, fileName, savePath) {

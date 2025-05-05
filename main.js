@@ -38,6 +38,7 @@ ipcMain.handle("import-kml", async (event) => {
   if (result.canceled) {return};
   kmlPath = result.filePaths[0];
 
+  event.sender.send('reading');
   coords = await readKML(kmlPath);
   console.log("KML imported");
 
@@ -53,17 +54,23 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothC
       if (!forbiddenChars.test(exportFileName)) {
         
         // Оповещение о начале конвертации
-        BrowserWindow.getAllWindows()[0].webContents.send('converting');
+        event.sender.send('converting');
         console.log(`Exporting ${exportFileName} with block ${blockId} and useSmoothCurves ${useSmoothCurves}`);
 
         // Сам экспорт (поочередный вызов 3 функций)
-        const bteCoords = getBTECoords(coords);
-        const schem = createSchematic(bteCoords, blockId, useSmoothCurves);
-        await exportSchematic(schem, exportFileName, kmlPath);
+        try {
+          const bteCoords = getBTECoords(coords);
+          const schem = createSchematic(bteCoords, blockId, useSmoothCurves);
+          await exportSchematic(schem, exportFileName, kmlPath);
+        } catch (err) {
+          console.error("Ошибка при создании схемы:",err);
+          throw new Error(err.message);
+        }
+        
         console.log('Successful export')
         
         // Оповещение о том что произошел экспорт
-        BrowserWindow.getAllWindows()[0].webContents.send('export-success')
+        event.sender.send('export-success')
 
       } else { 
         console.log('Exception: Forbidden chars in files name')

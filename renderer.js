@@ -17,7 +17,11 @@ exportSchem.addEventListener('click', () => {
   const blockId = blockIdInput.value; // Значение diamond_block
   const exportFileName = exportFileNameInput.value; // Значение converted
   const useSmoothCurves = useSmoothCurvesInput.checked;
-  window.electron.invokeExportSchem(blockId, exportFileName, useSmoothCurves);
+  try {
+    window.electron.invokeExportSchem(blockId, exportFileName, useSmoothCurves);
+  } catch (err) {
+    alert("Ошибка экспорта схемы:\n" + err.message);
+  }
 });
 
 // Оповещение об успешном импорте
@@ -37,3 +41,9 @@ window.electron.onExportSuccess(() => {
   statusDiv.textContent = 'Файл успешно сохранен!';
   statusDiv.style.color = 'MediumSeaGreen';
 })
+
+window.electron.onReading(() => {
+  statusDiv.textContent = 'Чтение файла...'
+  statusDiv.style.color = 'wheat'
+})
+

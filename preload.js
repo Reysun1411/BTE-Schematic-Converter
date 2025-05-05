@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('electron', {
   invokeExportSchem: (blockId, exportFileName, useSmoothCurves) => ipcRenderer.invoke('export-schem', blockId, exportFileName, useSmoothCurves),
   onImportSuccess: (callback) => ipcRenderer.on('import-success', (event, fileName) => callback(fileName)),
   onExportSuccess: (callback) => ipcRenderer.on('export-success', callback),
-  onConverting: (callback) => ipcRenderer.on('converting', callback)
+  onConverting: (callback) => ipcRenderer.on('converting', callback),
+  onReading: (callback) => ipcRenderer.on('reading', callback)
 });

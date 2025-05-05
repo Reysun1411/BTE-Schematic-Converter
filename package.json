@@ -31,6 +31,7 @@
   "type": "module",
   "dependencies": {
     "@bte-germany/terraconvert": "^1.1.2",
+    "fast-xml-parser": "^5.2.1",
     "prismarine-nbt": "^2.7.0"
   },
   "devDependencies": {
