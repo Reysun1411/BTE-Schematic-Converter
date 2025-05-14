@@ -27,18 +27,40 @@
       border-radius: 4px;
       margin-top: 5px;
     }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 80px; /* Высота заголовка = высоте логотипа */
+      padding: 0 20px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .logo {
+      height: 100%; /* Логотип по высоте header */
+      max-width: 150px;
+      object-fit: contain;
+    }
   </style>
 </head>
 <body>
-  <h1>KML to BTE Schematic</h1>
-  <div>
+  <header class="header">
+    <img src="kmltobtelogo.png" alt="BTE" class="logo"/>
+    <div class="title">KML to BTE Schematic</div>
+  </header>
+  
+  <div style="margin-top: 10px">
     <button id="importKML">Импортировать KML</button>
     <button id="exportSchem">Экспортировать schem</button>
   </div>
-  <div id="status" style="margin-top: 10px; margin-bottom: 40px; text-align: center;">
+  <div id="status" style="margin-top: 10px; margin-bottom: 20px; text-align: center; font-weight: bold;">
     Импортируйте KML файл
   </div>
-  <div style="margin-bottom: 10px;">
+  <hr>
+  <div style="margin-bottom: 10px; margin-top: 20px;">
     <label for="blockId">ID блока, из которого будут созданы контуры:</label>
     <input type="text" id="blockId" value="diamond_block"/>
   </div>
@@ -51,7 +73,7 @@
   <div>
     <label>
       <input type="checkbox" id="useSmoothCurves">
-      Округление линий
+      Округление линий (тестовая функция)
     </label>
   </div>
 

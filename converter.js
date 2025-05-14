@@ -5,7 +5,16 @@ import { XMLParser } from "fast-xml-parser";
 import zlib from "zlib";
 import path from "path";
 
-// Чтение файла KML
+// Чтение и парсинг файла KML
+/* Вид возвращаемого словаря (ключ - высота, значение - массив линий):
+  {1: [ 
+        [ [lon,lat], [lon,lat], [lon,lat]... ]
+        [ [lon,lat], [lon,lat], [lon,lat]... ]
+        ...
+      ]
+   2: ...
+  }
+*/
 export async function readKML(filepath) {
     // Чтение всего файла в data
     const data = await fs.readFile(filepath, "utf-8");
@@ -47,28 +56,19 @@ export async function readKML(filepath) {
         if (!coords) continue;
 
         const points = coords
-            .split(/\s+/)  // Разделение точек по пробелам и переносам строки
+            .split(/\s+/)                              // Разделение точек по пробелам и переносам строки
             .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
-            .filter(arr => arr.length >= 2); // Только 2 и больше элемента в массиве
+            .filter(arr => arr.length >= 2);           // Только 2 и больше элемента в массиве
         
         const elevation = elevationData !== undefined
         ? Number(elevationData)     // Если был найден ELEV, то преобразуем его в число
-        : (points[0]?.[2] ?? 0);        // если нет ELEV — берем высоту из третьего числа координат; если и он не определен, то 0
+        : (points[0]?.[2] ?? 0);    // если нет ELEV — берем высоту из третьего числа координат; если и он не определен, то 0
 
-        const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат линии, где у каждой координаты оставляем лишь широту и долготу
+        const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат точек линии c широтой и долготой
         if (!contours[elevation]) {contours[elevation] = []}; // Создаем ключ высоты в contours, если такой высоты еще нет
         contours[elevation].push(linePoints);                 // Пушим значение в словарь
     }
     
-    /* Вид возвращаемого словаря (ключ - высота, значение - массив линий):
-    {1: [ 
-          [ [lon,lat], [lon,lat], [lon,lat]... ]
-          [ [lon,lat], [lon,lat], [lon,lat]... ]
-          ...
-        ]
-      2: ...
-      ...}
-    */
     return contours;
 }
 
@@ -149,9 +149,11 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
       lines.forEach(line => {
         const flat2D = line.map(([x, z]) => [x - minX, z - minZ]);
         let segmentPoints;
-
+        
+        // Соединение точек со скруглением (тест)
         if (useSmoothCurves) {
           segmentPoints = catmullRomSpline(flat2D);
+        // Прямое соединение точек
         } else {
           segmentPoints = [];
           for (let i = 0; i < flat2D.length - 1; i++) {
@@ -167,10 +169,11 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
       });
     });
 
+    // Создание схематика
     const schematic = {
       type: TagType.Compound,
       name: "Schematic",
-      author: "KMLtoBTESchematic 1.0.1 by Reysun",
+      author: "KMLtoBTESchematic",
       value: {
         DataVersion: { type: TagType.Int, value: 3700 },
         Version: { type: TagType.Int, value: 2 },
@@ -196,8 +199,6 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
       },
     };
 
-    console.log('original point: ',[Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)])
-
     const nbtBuffer = writeUncompressed(schematic);
     const compressed = zlib.gzipSync(nbtBuffer);
 
@@ -214,7 +215,7 @@ export function exportSchematic(schem, fileName, savePath) {
     })
 }
 
-
+// Интерполяция Catmull-Rom
 function catmullRomSpline(points, segments = 30) {
   const result = [];
   // Добавляем первый и последний точки для правильной интерполяции
