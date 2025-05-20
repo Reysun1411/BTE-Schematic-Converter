@@ -44,29 +44,45 @@ export async function readKML(filepath) {
 
     const contours = {};
 
+    // Обрабатываем каждый или один Placemark
     for (const placemark of placemarks) {
 
-        // Получение высоты в ExtendedData (для kml созданных в qgis)
-        const elevationData = placemark.ExtendedData?.SchemaData?.SimpleData?.find(
-            (d) => d["@_name"] === "ELEV"
-        )?.["#text"];
+      // Получение высоты в ExtendedData (для kml созданных в qgis)
+      const elevationData = placemark.ExtendedData?.SchemaData?.SimpleData?.find(
+          (d) => d["@_name"] === "ELEV"
+      )?.["#text"];
 
-        // Получаем всё что между <coordinates></coordinates>
-        const coords = placemark.LineString?.coordinates?.trim();
-        if (!coords) continue;
+      // Ищем местоположение LineString, в котором хранятся координаты
+      let lineStrings = [];
 
-        const points = coords
-            .split(/\s+/)                              // Разделение точек по пробелам и переносам строки
-            .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
-            .filter(arr => arr.length >= 2);           // Только 2 и больше элемента в массиве
+      // Он может быть просто в Placemark (тогда он всего 1)
+      if (placemark.LineString) { lineStrings = [placemark.LineString]; }
+      // Или внутри MultiGeometry (тогда их может быть несколько)
+      else if (placemark.MultiGeometry?.LineString) {
+        const multi = placemark.MultiGeometry.LineString;
+        lineStrings = Array.isArray(multi) ? multi : [multi];
+      }
+
+      // Обрабатываем каждый или один lineStrings
+      for (const line of lineStrings) {
         
-        const elevation = elevationData !== undefined
-        ? Number(elevationData)     // Если был найден ELEV, то преобразуем его в число
-        : (points[0]?.[2] ?? 0);    // если нет ELEV — берем высоту из третьего числа координат; если и он не определен, то 0
+          // Получаем coordinates
+          const coords = line.coordinates?.trim();
+          if (!coords) continue;
 
-        const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат точек линии c широтой и долготой
-        if (!contours[elevation]) {contours[elevation] = []}; // Создаем ключ высоты в contours, если такой высоты еще нет
-        contours[elevation].push(linePoints);                 // Пушим значение в словарь
+          const points = coords
+              .split(/\s+/)                              // Разделение точек по пробелам и переносам строки
+              .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
+              .filter(arr => arr.length >= 2);           // Только 2 и больше элемента в массиве
+          
+          const elevation = elevationData !== undefined
+          ? Number(elevationData)               // Если был найден ELEV, то преобразуем его в число
+          : (Math.round(points[0]?.[2] ?? 0));  // если нет ELEV — берем высоту из третьего числа координат
+
+          const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат точек линии c широтой и долготой
+          if (!contours[elevation]) {contours[elevation] = []}; // Создаем ключ высоты в contours, если такой высоты еще нет
+          contours[elevation].push(linePoints);                 // Пушим значение в словарь
+      }
     }
     
     return contours;
