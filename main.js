@@ -29,7 +29,6 @@ app.whenReady().then(createWindow);
 //
 // Импорт
 ipcMain.handle("import-kml", async (event) => {
-
   const result = await dialog.showOpenDialog({
     filters: [{ name: 'Geodata Files', extensions: ['kml','geojson']}],
     properties: ['openFile']
