@@ -1,6 +1,6 @@
 {
-  "name": "kmltoschem",
-  "version": "1.1.0",
+  "name": "bte-schematic-converter",
+  "version": "1.2.0",
   "main": "main.js",
   "build": {
     "appId": "com.reysun.kmltoschem",
@@ -27,7 +27,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Program for converting GIS files to BTE projection schematic files for BuildTheEarth project",
   "type": "module",
   "dependencies": {
     "@bte-germany/terraconvert": "^1.1.2",

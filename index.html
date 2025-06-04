@@ -12,11 +12,13 @@
     }
     button {
       background-color: #3a3a3a;
+      font-size: 14px;
       color: #f0f0f0;
       border: none;
       padding: 8px 12px;
-      margin: 5px;
       border-radius: 5px;
+      margin-top: 10px;
+      width: 260px;
       cursor: pointer;
     }
     input {
@@ -52,14 +54,14 @@
 <body>
   <header class="header">
     <img src="kmltobtelogo.png" alt="BTE" class="logo"/>
-    <div class="title">KML to BTE Schematic</div>
+    <div class="title">BTE Schematic Converter</div>
   </header>
   
-  <div style="margin-top: 10px">
-    <button id="importKML">Импортировать KML/Geojson</button>
+  <div style="text-align: center">
+    <button id="importKML">Импортировать KML / Geojson</button>
     <button id="exportSchem">Экспортировать schem</button>
   </div>
-  <div id="status" style="margin-top: 10px; margin-bottom: 20px; text-align: center; font-weight: bold;">
+  <div id="status" style="margin-top: 20px; margin-bottom: 20px; text-align: center; font-weight: bold;">
     Импортируйте файл
   </div>
   <div id="originpoint" 
