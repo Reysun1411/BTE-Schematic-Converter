@@ -1,7 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
 
-const GEOJSON_POLYGON_TYPES = new Set(['Polygon','MultiLineString'])
-
 // KML
 export async function KMLParse(data) {
     // Создание парсера
@@ -34,36 +32,70 @@ export async function KMLParse(data) {
 
         // Получение высоты в ExtendedData (для kml созданных в qgis)
         const elevationData = placemark.ExtendedData?.SchemaData?.SimpleData?.find(
-            (d) => d["@_name"] === "ELEV"
-        )?.["#text"];
+            (d) => d['@_name'] === 'ELEV'
+        )?.['#text'];
 
-        // Ищем местоположение LineString, в котором хранятся координаты
-        let lineStrings = [];
+        let geometries = [];
 
-        // Он может быть просто в Placemark (тогда он всего 1)
-        if (placemark.LineString) { lineStrings = [placemark.LineString]; }
-        // Или внутри MultiGeometry (тогда их может быть несколько)
-        else if (placemark.MultiGeometry?.LineString) {
-            const multi = placemark.MultiGeometry.LineString;
-            lineStrings = Array.isArray(multi) ? multi : [multi];
+        // 1. Если есть LineString напрямую
+        if (placemark.LineString) {
+            geometries.push({ type: 'LineString', data: placemark.LineString });
         }
 
-        // Обрабатываем каждый или один lineStrings
-        for (const line of lineStrings) {
-        
-            // Получаем coordinates
-            const coords = line.coordinates?.trim();
-            if (!coords) continue;
+        // 2. Если есть Polygon напрямую
+        if (placemark.Polygon) {
+            geometries.push({ type: 'Polygon', data: placemark.Polygon });
+        }
 
-            const points = coords
+        // 3. Если есть MultiGeometry
+        if (placemark.MultiGeometry) {
+            const multi = placemark.MultiGeometry;
+        
+            if (multi.LineString) {
+                const lines = Array.isArray(multi.LineString) ? multi.LineString : [multi.LineString];
+                geometries.push(...lines.map(line => ({ type: 'LineString', data: line })));
+            }
+
+            if (multi.Polygon) {
+                const polys = Array.isArray(multi.Polygon) ? multi.Polygon : [multi.Polygon];
+                geometries.push(...polys.map(poly => ({ type: 'Polygon', data: poly })));
+            }
+        }
+
+        // Обрабатываем каждый или один геометрический объект
+        for (const {type, data} of geometries) {
+            let geometriesCoords = []
+
+            if (type === 'LineString') {
+                const lsCoords = data.coordinates
+                if (lsCoords) { geometriesCoords.push(lsCoords.trim()) };
+
+            } if (type == 'Polygon') {
+                const polyCoords = data.outerBoundaryIs.LinearRing.coordinates;
+                if (polyCoords) { geometriesCoords.push(polyCoords.trim()) };
+                
+                const inners = data.innerBoundaryIs;
+                if (inners) {
+                    const innerArray = Array.isArray(inners) ? inners : [inners];
+                    for (const inner of innerArray) {
+                        const innerCoords = inner.LinearRing?.coordinates;
+                        if (innerCoords) { geometriesCoords.push(innerCoords.trim()) };
+                    }
+                }
+            }
+            if (!geometriesCoords) continue;
+
+            for (let i = 0; i < geometriesCoords.length; i++) {
+                const points = geometriesCoords[i]
                 .split(/\s+/)                              // Разделение точек по пробелам и переносам строки
                 .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
-                .filter(arr => arr.length >= 2);           // Только 2 и больше элемента в массиве
             
-            const elevation = defineElevation(elevationData, points[0], contours)
+                const elevation = defineElevation(elevationData, points[0], contours)
 
-            const linePoints = removeThirdParameter(points);      // Оставляем в списке координат точек линии все кроме высоты
-            contours[elevation].push(linePoints);                 // Пушим значение в словарь
+                const linePoints = removeThirdParameter(points);      // Оставляем в списке координат точек линии все кроме высоты
+                contours[elevation].push(linePoints);                 // Пушим значение в словарь
+            }
+            
         }
     }
     
@@ -86,7 +118,7 @@ export async function GeojsonParse(data) {
         let firstPoint = featureCoordinates[0];
         let isPoly = false;
         const featureType = feature.geometry.type;
-        if (GEOJSON_POLYGON_TYPES.has(featureType)) {
+        if (featureType == 'Polygon') {
             isPoly = true;
             firstPoint = featureCoordinates[0][0]
         }
