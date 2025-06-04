@@ -4,6 +4,7 @@ import { writeUncompressed, TagType } from "prismarine-nbt";
 import { XMLParser } from "fast-xml-parser";
 import zlib from "zlib";
 import path from "path";
+import { KMLParse, GeojsonParse } from "./geoparser.js";
 
 // Чтение и парсинг файла KML
 /* Вид возвращаемого словаря (ключ - высота, значение - массив линий):
@@ -18,74 +19,18 @@ import path from "path";
 export async function readKML(filepath) {
     // Чтение всего файла в data
     const data = await fs.readFile(filepath, "utf-8");
-    
-    // Создание парсера
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_"
-    });
-    const file = parser.parse(data); // парсим
 
-    let placemarks = [];
-    const doc = file.kml.Document;
-
-    // Если в документе несколько Placemark, то placemarks уже будет массивом:
-    if (Array.isArray(doc.Placemark)) {
-      placemarks = doc.Placemark;
-    } else if (doc.Folder && Array.isArray(doc.Folder.Placemark)) {
-      placemarks = doc.Folder.Placemark;
-
-    // Если в документа один Placemark, то надо сделать placemarks массивом:
-    } else if (doc.Folder && doc.Folder.Placemark) {
-      placemarks = [doc.Folder.Placemark];
-    } else if (doc.Placemark) {
-      placemarks = [doc.Placemark];
+    const ext = path.extname(filepath).toLowerCase();
+    console.log(ext)
+    if (ext == '.kml') {
+      return KMLParse(data)
     }
-
-    const contours = {};
-
-    // Обрабатываем каждый или один Placemark
-    for (const placemark of placemarks) {
-
-      // Получение высоты в ExtendedData (для kml созданных в qgis)
-      const elevationData = placemark.ExtendedData?.SchemaData?.SimpleData?.find(
-          (d) => d["@_name"] === "ELEV"
-      )?.["#text"];
-
-      // Ищем местоположение LineString, в котором хранятся координаты
-      let lineStrings = [];
-
-      // Он может быть просто в Placemark (тогда он всего 1)
-      if (placemark.LineString) { lineStrings = [placemark.LineString]; }
-      // Или внутри MultiGeometry (тогда их может быть несколько)
-      else if (placemark.MultiGeometry?.LineString) {
-        const multi = placemark.MultiGeometry.LineString;
-        lineStrings = Array.isArray(multi) ? multi : [multi];
-      }
-
-      // Обрабатываем каждый или один lineStrings
-      for (const line of lineStrings) {
-        
-          // Получаем coordinates
-          const coords = line.coordinates?.trim();
-          if (!coords) continue;
-
-          const points = coords
-              .split(/\s+/)                              // Разделение точек по пробелам и переносам строки
-              .map(line => line.split(',').map(Number))  // Разделение широты, долготы (и если есть - высоты) по запятой
-              .filter(arr => arr.length >= 2);           // Только 2 и больше элемента в массиве
-          
-          const elevation = elevationData !== undefined
-          ? Number(elevationData)               // Если был найден ELEV, то преобразуем его в число
-          : (Math.round(points[0]?.[2] ?? 0));  // если нет ELEV — берем высоту из третьего числа координат
-
-          const linePoints = points.map(p => [p[0], p[1]]);     // Создаем список координат точек линии c широтой и долготой
-          if (!contours[elevation]) {contours[elevation] = []}; // Создаем ключ высоты в contours, если такой высоты еще нет
-          contours[elevation].push(linePoints);                 // Пушим значение в словарь
-      }
+    else if (ext == '.geojson') {
+      return GeojsonParse(data)
     }
-    
-    return contours;
+    else {
+      return NaN
+    }
 }
 
 // Преобразование координат в проекцию BTE и округление

@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import {readKML, getBTECoords, createSchematic, exportSchematic} from "./converter.js"
 
-let kmlPath = null;
+let filePath = null;
 let coords = null;
 const forbiddenChars = /[\\\/:*?"<>|]/;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,18 +31,18 @@ app.whenReady().then(createWindow);
 ipcMain.handle("import-kml", async (event) => {
 
   const result = await dialog.showOpenDialog({
-    filters: [{ name: 'KML Files', extensions: ['kml']}],
+    filters: [{ name: 'Geodata Files', extensions: ['kml','geojson']}],
     properties: ['openFile']
   });
 
   if (result.canceled) {return};
-  kmlPath = result.filePaths[0];
+  filePath = result.filePaths[0];
 
   event.sender.send('reading');
-  coords = await readKML(kmlPath);
+  coords = await readKML(filePath);
   console.log("KML imported");
 
-  const fileName = path.basename(kmlPath);
+  const fileName = path.basename(filePath);
   // Оповещение о том что произошел импорт
   event.sender.send('import-success', fileName);
 });
@@ -50,7 +50,7 @@ ipcMain.handle("import-kml", async (event) => {
 // Экспорт
 ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothCurves) => {
 
-    if (coords && kmlPath) {
+    if (coords && filePath) {
       if (!forbiddenChars.test(exportFileName)) {
         
         // Оповещение о начале конвертации
@@ -61,7 +61,7 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothC
         try {
           const bteCoords = getBTECoords(coords);
           const schem = createSchematic(bteCoords, blockId, useSmoothCurves);
-          await exportSchematic(schem, exportFileName, kmlPath);
+          await exportSchematic(schem, exportFileName, filePath);
         } catch (err) {
           console.error("Ошибка при создании схемы:",err);
           event.sender.send('export-error');
