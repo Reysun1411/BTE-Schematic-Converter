@@ -3,6 +3,7 @@ const importKml = document.getElementById('importKML');
 const exportSchem = document.getElementById('exportSchem');
 const blockIdInput = document.getElementById('blockId');
 const exportFileNameInput = document.getElementById('exportFileName');
+const doConnectionsInput = document.getElementById('doConnections');
 const useSmoothCurvesInput = document.getElementById("useSmoothCurves");
 
 // Обработка кнопки импорта
@@ -16,9 +17,10 @@ exportSchem.addEventListener('click', () => {
   console.log('Export schem');
   const blockId = blockIdInput.value; // Значение diamond_block
   const exportFileName = exportFileNameInput.value; // Значение converted
+  const doConnections = doConnectionsInput.checked;
   const useSmoothCurves = useSmoothCurvesInput.checked;
   try {
-    window.electron.invokeExportSchem(blockId, exportFileName, useSmoothCurves);
+    window.electron.invokeExportSchem(blockId, exportFileName, doConnections, useSmoothCurves);
   } catch (err) {
     alert("Ошибка экспорта схемы:\n" + err.message);
   }

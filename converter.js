@@ -65,7 +65,7 @@ export function getBTECoords(contours) {
 
 
 // Создание схематики
-export function createSchematic(btecoords, blockId, useSmoothCurves) {
+export function createSchematic(btecoords, blockId, doConnections, useSmoothCurves) {
     const MAX_ALLOWED_SIZE = 500_000_000;
 
     // Получаем все координаты
@@ -111,14 +111,24 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
         const flat2D = line.map(([x, z]) => [x - minX, z - minZ]);
         let segmentPoints;
         
-        // Соединение точек со скруглением (тест)
-        if (useSmoothCurves) {
-          segmentPoints = catmullRomSpline(flat2D);
-        // Прямое соединение точек
-        } else {
+        // Соединения точек включены
+        if (doConnections) {
+          // Соединение точек со скруглением (тест)
+          if (useSmoothCurves) {
+            segmentPoints = catmullRomSpline(flat2D);
+          // Прямое соединение точек
+          } else {
+            segmentPoints = [];
+            for (let i = 0; i < flat2D.length - 1; i++) {
+              segmentPoints.push(...bresenham2D(...flat2D[i], ...flat2D[i + 1]));
+            }
+          }
+        }
+        // Соединения точек выключены
+        else {
           segmentPoints = [];
-          for (let i = 0; i < flat2D.length - 1; i++) {
-            segmentPoints.push(...bresenham2D(...flat2D[i], ...flat2D[i + 1]));
+          for (let i = 0; i < flat2D.length-1; i++) {
+            segmentPoints.push(flat2D[i])
           }
         }
 
@@ -127,6 +137,7 @@ export function createSchematic(btecoords, blockId, useSmoothCurves) {
           const index = y * width * length + z * length + x;
           blockData[index] = 1;
         });
+
       });
     });
 

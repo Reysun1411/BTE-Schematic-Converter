@@ -48,19 +48,19 @@ ipcMain.handle("import-kml", async (event) => {
 });
 //
 // Экспорт
-ipcMain.handle('export-schem', async (event, blockId, exportFileName, useSmoothCurves) => {
+ipcMain.handle('export-schem', async (event, blockId, exportFileName, doConnections, useSmoothCurves) => {
 
     if (coords && filePath) {
       if (!forbiddenChars.test(exportFileName)) {
         
         // Оповещение о начале конвертации
         event.sender.send('converting');
-        console.log(`Exporting ${exportFileName} with block ${blockId} and useSmoothCurves ${useSmoothCurves}`);
+        console.log(`Exporting ${exportFileName} with block ${blockId}, doConnections ${doConnections} and useSmoothCurves ${useSmoothCurves}`);
 
         // Сам экспорт (поочередный вызов 3 функций)
         try {
           const bteCoords = getBTECoords(coords);
-          const schem = createSchematic(bteCoords, blockId, useSmoothCurves);
+          const schem = createSchematic(bteCoords, blockId, doConnections, useSmoothCurves);
           await exportSchematic(schem, exportFileName, filePath);
         } catch (err) {
           console.error("Ошибка при создании схемы:",err);
