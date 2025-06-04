@@ -1,4 +1,5 @@
 const statusDiv = document.getElementById('status');
+const originDiv = document.getElementById('originpoint')
 const importKml = document.getElementById('importKML');
 const exportSchem = document.getElementById('exportSchem');
 const blockIdInput = document.getElementById('blockId');
@@ -39,8 +40,9 @@ window.electron.onConverting(() => {
 })
 
 // Оповещение об успешном экспорте
-window.electron.onExportSuccess(() => {
+window.electron.onExportSuccess((originPoint) => {
   statusDiv.textContent = 'Файл успешно сохранен!';
+  originDiv.textContent = 'Исходная точка схематики: '+originPoint;
   statusDiv.style.color = 'MediumSeaGreen';
 })
 

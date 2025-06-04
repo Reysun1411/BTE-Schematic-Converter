@@ -141,6 +141,8 @@ export function createSchematic(btecoords, blockId, doConnections, useSmoothCurv
       });
     });
 
+    const originPoint = [Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)]
+
     // Создание схематика
     const schematic = {
       type: TagType.Compound,
@@ -166,15 +168,15 @@ export function createSchematic(btecoords, blockId, doConnections, useSmoothCurv
         Metadata: { type: TagType.Compound, value: {} },
         Offset: {
           type: TagType.IntArray,
-          value: [Math.ceil(minX), Math.ceil(minY), Math.ceil(minZ)],
+          value: originPoint,
         },
       },
     };
 
     const nbtBuffer = writeUncompressed(schematic);
     const compressed = zlib.gzipSync(nbtBuffer);
-
-    return compressed;
+    
+    return [compressed, originPoint];
 }
 
 

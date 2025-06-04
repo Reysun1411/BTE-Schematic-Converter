@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function createWindow() {
   const win = new BrowserWindow({
     width: 400,
-    height: 450,
+    height: 480,
     icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -59,19 +59,24 @@ ipcMain.handle('export-schem', async (event, blockId, exportFileName, doConnecti
 
         // Сам экспорт (поочередный вызов 3 функций)
         try {
+
           const bteCoords = getBTECoords(coords);
-          const schem = createSchematic(bteCoords, blockId, doConnections, useSmoothCurves);
-          await exportSchematic(schem, exportFileName, filePath);
+          const output = createSchematic(bteCoords, blockId, doConnections, useSmoothCurves);
+
+          const schem = output[0], originPoint = output[1];
+
+          exportSchematic(schem, exportFileName, filePath);
+
+          console.log('Successful export')
+          // Оповещение о том что произошел экспорт
+          event.sender.send('export-success', originPoint.join(' '))
+
         } catch (err) {
           console.error("Ошибка при создании схемы:",err);
           event.sender.send('export-error');
           throw new Error(err.message);
         }
         
-        console.log('Successful export')
-        
-        // Оповещение о том что произошел экспорт
-        event.sender.send('export-success')
 
       } else { 
         console.log('Exception: Forbidden chars in files name')

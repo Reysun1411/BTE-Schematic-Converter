@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>KML to BTE Schematic</title>
+  <title>BTE Schematic Converter</title>
   <style>
     body {
       background-color: #2c2c2c;
@@ -38,12 +38,15 @@
       font-size: 28px;
       font-weight: bold;
       margin-left: 10px;
+      color: lightcyan; /* или другой цвет, подходящий под фон */
+      text-shadow: 0 0 5px #002548, 0 0 10px #002548, 0 0 15px #002548;
     }
     .logo {
       height: 100%; /* Логотип по высоте header */
       max-width: 150px;
       object-fit: contain;
     }
+    
   </style>
 </head>
 <body>
@@ -53,12 +56,14 @@
   </header>
   
   <div style="margin-top: 10px">
-    <button id="importKML">Импортировать KML</button>
+    <button id="importKML">Импортировать KML/Geojson</button>
     <button id="exportSchem">Экспортировать schem</button>
   </div>
   <div id="status" style="margin-top: 10px; margin-bottom: 20px; text-align: center; font-weight: bold;">
-    Импортируйте KML файл
+    Импортируйте файл
   </div>
+  <div id="originpoint" 
+  style="margin-top: 10px; margin-bottom: 5px; text-align: center; font-weight: bold; font-size: small; color: mediumseagreen"></div>
   <hr>
   <div style="margin-bottom: 10px; margin-top: 20px;">
     <label for="blockId">ID блока, из которого будут созданы контуры:</label>
