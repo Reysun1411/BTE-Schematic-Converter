@@ -1,4 +1,4 @@
-# KML to BTE Schematic
+# BTE Schematic Converter
 * У этого приложения всего одна функция - конвертация KML и Geojson файлов в Minecraft schematic-файлы, выполненные в проекции BuildTheEarth. Сделано специально для TeamCIS для упрощения создания рельефа, но конвертация геоданных в схематик-файл может пригодиться не только для рельефа.
 * This app has only one function - converting KML and Geojson files into a Minecraft BuildTheEarth projection schematic files. Made for TeamCIS to simplify terraforming, but converting geodata to a schematic file can be useful for more than just terrain.
 ## Поддерживаемые форматы
