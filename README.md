@@ -17,4 +17,5 @@ Use TerraSketch for outlining in BTE projection!
 1. @bte-germany/terraconvert - for converting from latlng to minecraft coordinates
 2. prismarine-nbt - for writing NBT data for exporting to .schem format
 3. fast-xml-parser - for KML parsing
-4. Electron - for writing application
+4. electron - for writing application
+5. electron-builder - for build into an exe file

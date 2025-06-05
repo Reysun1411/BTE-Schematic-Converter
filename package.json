@@ -3,8 +3,8 @@
   "version": "1.2.0",
   "main": "main.js",
   "build": {
-    "appId": "com.reysun.kmltoschem",
-    "productName": "KML to Schem",
+    "appId": "com.reysun.bteschemconverter",
+    "productName": "BTE Schematic Converter",
     "icon": "icon.ico",
     "files": [
       "**/*"
